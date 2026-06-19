@@ -78,10 +78,10 @@ func TestRenderNav_OnlyConnectedNewestFirstWithArrow(t *testing.T) {
 			line1 = ln
 		}
 	}
-	if !strings.Contains(line2, "\U0001F449") || !strings.Contains(line2, "**") {
-		t.Fatalf("current PR not marked with arrow: %q", line2)
+	if !strings.HasSuffix(line2, "←") || !strings.Contains(line2, "**") {
+		t.Fatalf("current PR not marked with trailing arrow: %q", line2)
 	}
-	if strings.Contains(line1, "\U0001F449") {
+	if strings.Contains(line1, "←") {
 		t.Fatalf("non-current PR wrongly marked: %q", line1)
 	}
 

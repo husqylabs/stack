@@ -88,7 +88,7 @@ func RenderNav(s *stack.Stack, current string) (string, bool) {
 		}
 		entry := fmt.Sprintf("#%d %s", br.PR, title)
 		if br.Name == current {
-			fmt.Fprintf(&b, "- \U0001F449 **%s**\n", entry)
+			fmt.Fprintf(&b, "- **%s** ←\n", entry) // current PR: left arrow at end
 		} else {
 			fmt.Fprintf(&b, "- %s\n", entry)
 		}
