@@ -1,8 +1,8 @@
 # stack
 
-A client-side-only CLI for managing **stacked pull requests** — like Graphite,
-but with no backend server. The branch DAG is synced across teammates statelessly
-by embedding it as a hidden HTML comment in each PR description.
+A client-side-only CLI for managing **stacked pull requests** with no backend
+server. The branch DAG is synced across teammates statelessly by embedding it as
+a hidden HTML comment in each PR description.
 
 ## How it works
 
