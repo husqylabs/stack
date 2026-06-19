@@ -42,6 +42,7 @@ func NewGitHub(owner, repo string) *GitHub {
 type PR struct {
 	Number int    `json:"number"`
 	Title  string `json:"title"`
+	URL    string `json:"html_url"`
 	Body   string `json:"body"`
 	State  string `json:"state"`
 	Base   struct {

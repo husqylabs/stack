@@ -86,7 +86,14 @@ func RenderNav(s *stack.Stack, current string) (string, bool) {
 		if title == "" {
 			title = br.Name
 		}
-		entry := fmt.Sprintf("#%d %s", br.PR, title)
+		// The PR title is the only text, linked to the PR. Fall back to a plain
+		// "#<n>" reference if we somehow have no URL yet (still auto-links in-repo).
+		var entry string
+		if br.URL != "" {
+			entry = fmt.Sprintf("[%s](%s)", title, br.URL)
+		} else {
+			entry = fmt.Sprintf("[%s](#%d)", title, br.PR)
+		}
 		if br.Name == current {
 			fmt.Fprintf(&b, "- **%s** ←\n", entry) // current PR: left arrow at end
 		} else {

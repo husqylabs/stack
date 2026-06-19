@@ -20,8 +20,9 @@ type Branch struct {
 	Name         string `json:"name"`
 	Parent       string `json:"parent"`         // "" for a trunk-rooted base branch
 	ParentCommit string `json:"parent_commit"`  // recorded parent tip; the rebase --onto "old base"
-	PR           int    `json:"pr,omitempty"`   // forge PR/MR number, 0 if unsubmitted
-	Title        string `json:"title,omitempty"` // PR title, captured at submit; used in the nav comment
+	PR           int    `json:"pr,omitempty"`    // forge PR/MR number, 0 if unsubmitted
+	Title        string `json:"title,omitempty"` // PR title, captured at submit; the nav link text
+	URL          string `json:"url,omitempty"`   // PR web URL, captured at submit; the nav link target
 }
 
 // Stack is the DAG: a flat map of branches keyed by name, plus the trunk they

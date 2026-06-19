@@ -110,13 +110,13 @@ func (d *deps) ensurePR(ctx context.Context, gh *forge.GitHub, b *stack.Branch, 
 		}
 		if existing != nil {
 			b.PR = existing.Number
-			b.Title = existing.Title
+			b.Title, b.URL = existing.Title, existing.URL
 			if existing.Base.Ref != b.Parent {
 				updated, err := gh.SetBase(ctx, b.PR, b.Parent)
 				if err != nil {
 					return fmt.Errorf("repoint PR #%d base to %q: %w", b.PR, b.Parent, err)
 				}
-				b.Title = updated.Title
+				b.Title, b.URL = updated.Title, updated.URL
 				fmt.Fprintf(out, "  repointed PR #%d base -> %s\n", b.PR, b.Parent)
 			}
 			return nil
@@ -134,7 +134,7 @@ func (d *deps) ensurePR(ctx context.Context, gh *forge.GitHub, b *stack.Branch, 
 			return err
 		}
 		b.PR = created.Number
-		b.Title = created.Title
+		b.Title, b.URL = created.Title, created.URL
 		fmt.Fprintf(out, "  opened PR #%d %s -> %s\n", b.PR, b.Name, b.Parent)
 		return nil
 	}
@@ -146,6 +146,6 @@ func (d *deps) ensurePR(ctx context.Context, gh *forge.GitHub, b *stack.Branch, 
 	if err != nil {
 		return fmt.Errorf("align PR #%d base to %q: %w", b.PR, b.Parent, err)
 	}
-	b.Title = updated.Title
+	b.Title, b.URL = updated.Title, updated.URL
 	return nil
 }

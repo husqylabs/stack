@@ -1,6 +1,7 @@
 package forge
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -50,6 +51,7 @@ func TestRenderNav_OnlyConnectedNewestFirstWithArrow(t *testing.T) {
 		b, _ := s.Add(name, parent, "h")
 		b.PR = pr
 		b.Title = title
+		b.URL = fmt.Sprintf("https://example.test/pull/%d", pr)
 	}
 	mk("a", "main", 1, "first")
 	mk("b", "a", 2, "second")
@@ -59,22 +61,26 @@ func TestRenderNav_OnlyConnectedNewestFirstWithArrow(t *testing.T) {
 	if !ok {
 		t.Fatal("expected a nav block")
 	}
-	// Sibling PR #3 must NOT appear in b's stack.
-	if strings.Contains(nav, "#3") || strings.Contains(nav, "sibling") {
+	// Title is the only text, hyperlinked to the PR.
+	if !strings.Contains(nav, "[second](https://example.test/pull/2)") {
+		t.Fatalf("title should be a hyperlink to the PR:\n%s", nav)
+	}
+	// Sibling stack must NOT appear in b's stack.
+	if strings.Contains(nav, "sibling") || strings.Contains(nav, "pull/3") {
 		t.Fatalf("sibling stack leaked into nav:\n%s", nav)
 	}
-	// Newest-first: #2 should appear before #1.
-	if strings.Index(nav, "#2") > strings.Index(nav, "#1") {
+	// Newest-first: the child (pull/2) should appear before its parent (pull/1).
+	if strings.Index(nav, "pull/2") > strings.Index(nav, "pull/1") {
 		t.Fatalf("expected newest-first order:\n%s", nav)
 	}
-	// Current PR (b -> #2) marked; #1 not.
+	// Current PR (b) marked with trailing arrow; the other not.
 	lines := strings.Split(nav, "\n")
 	var line1, line2 string
 	for _, ln := range lines {
-		if strings.Contains(ln, "#2 second") {
+		if strings.Contains(ln, "second") {
 			line2 = ln
 		}
-		if strings.Contains(ln, "#1 first") {
+		if strings.Contains(ln, "first") {
 			line1 = ln
 		}
 	}
@@ -85,10 +91,13 @@ func TestRenderNav_OnlyConnectedNewestFirstWithArrow(t *testing.T) {
 		t.Fatalf("non-current PR wrongly marked: %q", line1)
 	}
 
-	// And from c's perspective, only #3 shows.
+	// And from c's perspective, only its own stack shows.
 	navC, ok := RenderNav(s, "c")
-	if !ok || strings.Contains(navC, "#1") || strings.Contains(navC, "#2") {
+	if !ok || strings.Contains(navC, "pull/1") || strings.Contains(navC, "pull/2") {
 		t.Fatalf("c's nav should contain only its own stack:\n%s", navC)
+	}
+	if !strings.Contains(navC, "pull/3") {
+		t.Fatalf("c's nav should contain its own PR:\n%s", navC)
 	}
 }
 
