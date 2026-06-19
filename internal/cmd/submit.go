@@ -67,7 +67,8 @@ func newSubmitCmd(d *deps) *cobra.Command {
 				}
 			}
 
-			// Pass 2: publish the now-complete DAG into every PR.
+			// Pass 2: with every PR number and title known, publish the complete
+			// DAG into each PR body and refresh its navigation comment.
 			for _, b := range order {
 				if b.PR == 0 {
 					continue
@@ -75,7 +76,12 @@ func newSubmitCmd(d *deps) *cobra.Command {
 				if err := gh.PublishStack(ctx, b.PR, d.stack); err != nil {
 					return fmt.Errorf("publish state to PR #%d: %w", b.PR, err)
 				}
-				fmt.Fprintf(out, "  synced state into PR #%d (%s)\n", b.PR, b.Name)
+				if nav, ok := forge.RenderNav(d.stack, b.Name); ok {
+					if err := gh.UpsertNavComment(ctx, b.PR, nav); err != nil {
+						return fmt.Errorf("update nav comment on PR #%d: %w", b.PR, err)
+					}
+				}
+				fmt.Fprintf(out, "  synced state + nav into PR #%d (%s)\n", b.PR, b.Name)
 			}
 
 			fmt.Fprintln(out, "Submitted.")
@@ -92,8 +98,9 @@ func newSubmitCmd(d *deps) *cobra.Command {
 }
 
 // ensurePR makes sure b has an open PR whose base is b.Parent, creating it if
-// needed and reconciling the base if the branch was re-parented. The resulting
-// PR number is written back onto b (caller persists).
+// needed and reconciling the base if the branch was re-parented. The resulting PR
+// number and title are written back onto b (caller persists); the title feeds the
+// nav comment and rides along in the embedded state for adopt.
 func (d *deps) ensurePR(ctx context.Context, gh *forge.GitHub, b *stack.Branch, draft bool, out io.Writer) error {
 	// Discover the PR if we don't already track its number.
 	if b.PR == 0 {
@@ -103,10 +110,13 @@ func (d *deps) ensurePR(ctx context.Context, gh *forge.GitHub, b *stack.Branch, 
 		}
 		if existing != nil {
 			b.PR = existing.Number
+			b.Title = existing.Title
 			if existing.Base.Ref != b.Parent {
-				if err := gh.SetBase(ctx, b.PR, b.Parent); err != nil {
+				updated, err := gh.SetBase(ctx, b.PR, b.Parent)
+				if err != nil {
 					return fmt.Errorf("repoint PR #%d base to %q: %w", b.PR, b.Parent, err)
 				}
+				b.Title = updated.Title
 				fmt.Fprintf(out, "  repointed PR #%d base -> %s\n", b.PR, b.Parent)
 			}
 			return nil
@@ -124,14 +134,18 @@ func (d *deps) ensurePR(ctx context.Context, gh *forge.GitHub, b *stack.Branch, 
 			return err
 		}
 		b.PR = created.Number
+		b.Title = created.Title
 		fmt.Fprintf(out, "  opened PR #%d %s -> %s\n", b.PR, b.Name, b.Parent)
 		return nil
 	}
 
 	// Known PR: keep its base aligned with the current parent (cheap, idempotent;
-	// matters after a re-parent). PATCH to the same base is a no-op server-side.
-	if err := gh.SetBase(ctx, b.PR, b.Parent); err != nil {
+	// matters after a re-parent). PATCH to the same base is a no-op server-side and
+	// returns the current title for the nav comment.
+	updated, err := gh.SetBase(ctx, b.PR, b.Parent)
+	if err != nil {
 		return fmt.Errorf("align PR #%d base to %q: %w", b.PR, b.Parent, err)
 	}
+	b.Title = updated.Title
 	return nil
 }

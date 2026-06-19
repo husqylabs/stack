@@ -55,6 +55,52 @@ func stripBlock(body string) string {
 	return blockRE().ReplaceAllString(body, "")
 }
 
+// RenderNav builds the stack-navigation comment for the PR on branch `current`.
+// It lists only the PRs in `current`'s connected stack (branches reachable
+// through tracked parent/child edges — sibling stacks that merely share the trunk
+// are excluded), newest-first (leaves before roots), shows each PR's title, and
+// marks the current PR with an arrow. The trunk never appears. A hidden marker is
+// embedded so the comment can be found and updated in place.
+//
+// Returns ("", false) if there is nothing to link (no connected branch has a PR).
+func RenderNav(s *stack.Stack, current string) (string, bool) {
+	order, err := s.TopoOrder() // parents-first
+	if err != nil {
+		return "", false
+	}
+	connected := s.Component(current)
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "<!-- %s -->\n", branding.B.NavMarker)
+	b.WriteString("**\U0001F4DA This stack** · newest first\n\n")
+
+	any := false
+	// Walk in reverse so the newest (deepest) branches sit on top.
+	for i := len(order) - 1; i >= 0; i-- {
+		br := order[i]
+		if br.PR == 0 || !connected[br.Name] {
+			continue // unsubmitted, or part of a different (sibling) stack
+		}
+		any = true
+		title := br.Title
+		if title == "" {
+			title = br.Name
+		}
+		entry := fmt.Sprintf("#%d %s", br.PR, title)
+		if br.Name == current {
+			fmt.Fprintf(&b, "- \U0001F449 **%s**\n", entry)
+		} else {
+			fmt.Fprintf(&b, "- %s\n", entry)
+		}
+	}
+	if !any {
+		return "", false
+	}
+
+	fmt.Fprintf(&b, "\n<sub>Auto-updated by `%s`</sub>", branding.B.Name)
+	return b.String(), true
+}
+
 // blockRE matches the whole hidden comment and captures the JSON payload (group 1).
 // Markers come from branding, so a rebrand changes the protocol in one place.
 func blockRE() *regexp.Regexp {

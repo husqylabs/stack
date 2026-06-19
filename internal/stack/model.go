@@ -18,9 +18,10 @@ import (
 // from the parent, and the cascade would replay the wrong range.
 type Branch struct {
 	Name         string `json:"name"`
-	Parent       string `json:"parent"`        // "" for a trunk-rooted base branch
-	ParentCommit string `json:"parent_commit"` // recorded parent tip; the rebase --onto "old base"
-	PR           int    `json:"pr,omitempty"`  // forge PR/MR number, 0 if unsubmitted
+	Parent       string `json:"parent"`         // "" for a trunk-rooted base branch
+	ParentCommit string `json:"parent_commit"`  // recorded parent tip; the rebase --onto "old base"
+	PR           int    `json:"pr,omitempty"`   // forge PR/MR number, 0 if unsubmitted
+	Title        string `json:"title,omitempty"` // PR title, captured at submit; used in the nav comment
 }
 
 // Stack is the DAG: a flat map of branches keyed by name, plus the trunk they
@@ -58,6 +59,41 @@ func (s *Stack) Children(name string) []*Branch {
 		}
 	}
 	return out
+}
+
+// Component returns the set of branch names connected to `name` through tracked
+// parent/child edges (the connected stack `name` belongs to). The trunk is not a
+// tracked branch, so two branches that both root on the trunk are NOT connected
+// unless one descends from the other — i.e. sibling stacks stay separate.
+func (s *Stack) Component(name string) map[string]bool {
+	seen := map[string]bool{}
+	if _, ok := s.Branches[name]; !ok {
+		return seen
+	}
+	queue := []string{name}
+	for len(queue) > 0 {
+		cur := queue[len(queue)-1]
+		queue = queue[:len(queue)-1]
+		if seen[cur] {
+			continue
+		}
+		seen[cur] = true
+		b := s.Branches[cur]
+		if b == nil {
+			continue
+		}
+		// Up: the parent, but only if it is itself a tracked branch (not trunk).
+		if _, ok := s.Branches[b.Parent]; ok && !seen[b.Parent] {
+			queue = append(queue, b.Parent)
+		}
+		// Down: every tracked child.
+		for _, ch := range s.Children(cur) {
+			if !seen[ch.Name] {
+				queue = append(queue, ch.Name)
+			}
+		}
+	}
+	return seen
 }
 
 // IsAncestor reports whether `ancestor` lies on the parent chain above `of`

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/husqylabs/stack/internal/branding"
@@ -40,6 +41,7 @@ func NewGitHub(owner, repo string) *GitHub {
 // each PR's base is its parent branch rather than trunk.
 type PR struct {
 	Number int    `json:"number"`
+	Title  string `json:"title"`
 	Body   string `json:"body"`
 	State  string `json:"state"`
 	Base   struct {
@@ -95,12 +97,17 @@ func (g *GitHub) CreatePR(ctx context.Context, in NewPR) (*PR, error) {
 	return &out, nil
 }
 
-// SetBase repoints an existing PR's base branch. Needed when a branch is
-// re-parented within the stack (e.g. its parent merged or moved).
+// SetBase repoints an existing PR's base branch and returns the updated PR (the
+// PATCH response carries the current title, which we reuse for the nav comment).
+// Needed when a branch is re-parented within the stack.
 // PATCH /repos/{o}/{r}/pulls/{n} with {"base": ...}
-func (g *GitHub) SetBase(ctx context.Context, number int, base string) error {
+func (g *GitHub) SetBase(ctx context.Context, number int, base string) (*PR, error) {
 	path := fmt.Sprintf("/repos/%s/%s/pulls/%d", g.Owner, g.Repo, number)
-	return g.doJSON(ctx, http.MethodPatch, path, map[string]string{"base": base}, nil)
+	var out PR
+	if err := g.doJSON(ctx, http.MethodPatch, path, map[string]string{"base": base}, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 // FetchStack is the MOCKUP the spec asked for: extract the JSON stack state from
@@ -136,6 +143,34 @@ func (g *GitHub) PublishStack(ctx context.Context, number int, s *stack.Stack) e
 		return err
 	}
 	return g.doJSON(ctx, http.MethodPatch, path, map[string]string{"body": newBody}, nil)
+}
+
+// issueComment is the slice of GitHub's comment object we need to find and
+// update our own nav comment. (PRs are issues, so PR comments use the issues API.)
+type issueComment struct {
+	ID   int64  `json:"id"`
+	Body string `json:"body"`
+}
+
+// UpsertNavComment writes the stack-navigation comment into a PR, updating our
+// existing comment in place if present (matched by the hidden nav marker) and
+// creating it otherwise. Idempotent: safe to call on every submit.
+func (g *GitHub) UpsertNavComment(ctx context.Context, number int, body string) error {
+	listPath := fmt.Sprintf("/repos/%s/%s/issues/%d/comments?per_page=100", g.Owner, g.Repo, number)
+	var comments []issueComment
+	if err := g.doJSON(ctx, http.MethodGet, listPath, nil, &comments); err != nil {
+		return fmt.Errorf("list comments on #%d: %w", number, err)
+	}
+
+	for _, c := range comments {
+		if strings.Contains(c.Body, branding.B.NavMarker) {
+			path := fmt.Sprintf("/repos/%s/%s/issues/comments/%d", g.Owner, g.Repo, c.ID)
+			return g.doJSON(ctx, http.MethodPatch, path, map[string]string{"body": body}, nil)
+		}
+	}
+
+	createPath := fmt.Sprintf("/repos/%s/%s/issues/%d/comments", g.Owner, g.Repo, number)
+	return g.doJSON(ctx, http.MethodPost, createPath, map[string]string{"body": body}, nil)
 }
 
 // doJSON performs one REST call: marshals `in` (if non-nil), sets auth headers,

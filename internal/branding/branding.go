@@ -44,6 +44,10 @@ var B = Brand{
 	StateMarkerPrefix: "stack-state",
 	StateMarkerEnd:    "stack-state:end",
 	StateSchemaVer:    "v1",
+
+	// Marker that identifies our stack-navigation comment so we update it in
+	// place instead of posting duplicates.
+	NavMarker: "stack-nav",
 }
 
 // Brand is the configurable surface. Keep it flat and boring on purpose.
@@ -55,6 +59,8 @@ type Brand struct {
 	StateDir, StateFile string
 
 	StateMarkerPrefix, StateMarkerEnd, StateSchemaVer string
+
+	NavMarker string
 }
 
 // Env builds a fully-qualified env-var name, e.g. Env("TOKEN") -> "STACK_TOKEN".
