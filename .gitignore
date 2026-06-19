@@ -1,0 +1,8 @@
+# Built binary
+/stack
+/dist/
+
+# Local stack state lives under .git/ and is never committed, but ignore a
+# stray copy just in case it's run from an unexpected cwd.
+stack.json
+pending.json
