@@ -72,7 +72,7 @@ func RenderNav(s *stack.Stack, current string) (string, bool) {
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "<!-- %s -->\n", branding.B.NavMarker)
-	b.WriteString("**\U0001F4DA This stack** · newest first\n\n")
+	b.WriteString("**\U0001F4DA This stack**\n\n")
 
 	any := false
 	// Walk in reverse so the newest (deepest) branches sit on top.
@@ -86,14 +86,14 @@ func RenderNav(s *stack.Stack, current string) (string, bool) {
 		if title == "" {
 			title = br.Name
 		}
-		// The PR title is the only text, linked to the PR. Fall back to a plain
-		// "#<n>" reference if we somehow have no URL yet (still auto-links in-repo).
-		var entry string
-		if br.URL != "" {
-			entry = fmt.Sprintf("[%s](%s)", title, br.URL)
-		} else {
-			entry = fmt.Sprintf("[%s](#%d)", title, br.PR)
+		// The PR title is the linked text; the PR number trails at the end of the
+		// line (also auto-links in-repo). Fall back to a "#<n>" link target if we
+		// somehow have no URL yet.
+		link := fmt.Sprintf("[%s](%s)", title, br.URL)
+		if br.URL == "" {
+			link = fmt.Sprintf("[%s](#%d)", title, br.PR)
 		}
+		entry := fmt.Sprintf("%s #%d", link, br.PR)
 		if br.Name == current {
 			fmt.Fprintf(&b, "- **%s** ←\n", entry) // current PR: left arrow at end
 		} else {

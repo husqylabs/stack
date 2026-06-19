@@ -61,9 +61,13 @@ func TestRenderNav_OnlyConnectedNewestFirstWithArrow(t *testing.T) {
 	if !ok {
 		t.Fatal("expected a nav block")
 	}
-	// Title is the only text, hyperlinked to the PR.
-	if !strings.Contains(nav, "[second](https://example.test/pull/2)") {
-		t.Fatalf("title should be a hyperlink to the PR:\n%s", nav)
+	// Title is hyperlinked to the PR, with the PR number trailing the line.
+	if !strings.Contains(nav, "[second](https://example.test/pull/2) #2") {
+		t.Fatalf("expected linked title followed by trailing PR number:\n%s", nav)
+	}
+	// The "newest first" caption was removed.
+	if strings.Contains(nav, "newest first") {
+		t.Fatalf("did not expect a 'newest first' caption:\n%s", nav)
 	}
 	// Sibling stack must NOT appear in b's stack.
 	if strings.Contains(nav, "sibling") || strings.Contains(nav, "pull/3") {
