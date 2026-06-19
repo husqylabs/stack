@@ -110,9 +110,9 @@ func (r *Repo) CommitsBetween(base, branch string) ([]*object.Commit, error) {
 		if c.Hash == baseCommit.Hash {
 			return storerStop
 		}
-		isAncestorOfBase, _ := baseCommit.IsAncestor(c)
-		if isAncestorOfBase {
-			return nil // shared history, not unique to branch
+		inBaseHistory, _ := c.IsAncestor(baseCommit)
+		if inBaseHistory {
+			return nil // reachable from base (e.g. via a merge): shared, not unique
 		}
 		out = append(out, c)
 		return nil
@@ -128,21 +128,24 @@ func (r *Repo) CommitsBetween(base, branch string) ([]*object.Commit, error) {
 }
 
 // FirstCommitSubject returns the subject line of the oldest commit unique to
-// `branch` relative to `base`, for use as a default PR title. Falls back to the
-// branch name if the range is empty.
-func (r *Repo) FirstCommitSubject(base, branch string) string {
+// `branch` relative to `base`, for use as a default PR title. The bool is false
+// when no real subject could be derived (empty range or blank message); in that
+// case the returned string is the branch name as a fallback. Callers that would
+// overwrite existing data (e.g. --update-titles) must check the bool so they
+// never clobber a good title with a branch name.
+func (r *Repo) FirstCommitSubject(base, branch string) (string, bool) {
 	commits, err := r.CommitsBetween(base, branch)
 	if err != nil || len(commits) == 0 {
-		return branch
+		return branch, false
 	}
 	msg := commits[0].Message
 	if i := strings.IndexByte(msg, '\n'); i >= 0 {
 		msg = msg[:i]
 	}
 	if msg = strings.TrimSpace(msg); msg == "" {
-		return branch
+		return branch, false
 	}
-	return msg
+	return msg, true
 }
 
 // RebaseInProgress reports whether git has a rebase paused mid-flight (the

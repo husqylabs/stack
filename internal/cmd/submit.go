@@ -27,7 +27,7 @@ import (
 //	  whole picture, not a snapshot from when it happened to be processed.
 func newSubmitCmd(d *deps) *cobra.Command {
 	var trunk, remote, owner, repo string
-	var draft bool
+	var draft, updateTitles bool
 
 	cmd := &cobra.Command{
 		Use:   branding.B.CmdSubmit,
@@ -59,7 +59,7 @@ func newSubmitCmd(d *deps) *cobra.Command {
 				}
 				fmt.Fprintf(out, "  pushed %s\n", b.Name)
 
-				if err := d.ensurePR(ctx, gh, b, draft, out); err != nil {
+				if err := d.ensurePR(ctx, gh, b, draft, updateTitles, out); err != nil {
 					return err
 				}
 				if err := d.store.Save(d.stack); err != nil {
@@ -94,6 +94,8 @@ func newSubmitCmd(d *deps) *cobra.Command {
 	cmd.Flags().StringVar(&owner, "owner", "", "forge repo owner/org")
 	cmd.Flags().StringVar(&repo, "repo", "", "forge repo name")
 	cmd.Flags().BoolVar(&draft, "draft", false, "open new PRs as drafts")
+	cmd.Flags().BoolVar(&updateTitles, "update-titles", false,
+		"reset each existing PR's title to its branch's first commit subject")
 	return cmd
 }
 
@@ -101,7 +103,7 @@ func newSubmitCmd(d *deps) *cobra.Command {
 // needed and reconciling the base if the branch was re-parented. The resulting PR
 // number and title are written back onto b (caller persists); the title feeds the
 // nav comment and rides along in the embedded state for adopt.
-func (d *deps) ensurePR(ctx context.Context, gh *forge.GitHub, b *stack.Branch, draft bool, out io.Writer) error {
+func (d *deps) ensurePR(ctx context.Context, gh *forge.GitHub, b *stack.Branch, draft, updateTitles bool, out io.Writer) error {
 	// Discover the PR if we don't already track its number.
 	if b.PR == 0 {
 		existing, err := gh.FindPR(ctx, b.Name)
@@ -119,10 +121,10 @@ func (d *deps) ensurePR(ctx context.Context, gh *forge.GitHub, b *stack.Branch, 
 				b.Title, b.URL = updated.Title, updated.URL
 				fmt.Fprintf(out, "  repointed PR #%d base -> %s\n", b.PR, b.Parent)
 			}
-			return nil
+			return d.maybeUpdateTitle(ctx, gh, b, updateTitles, out)
 		}
 
-		title := d.repo.FirstCommitSubject(b.ParentCommit, b.Name)
+		title, _ := d.repo.FirstCommitSubject(b.ParentCommit, b.Name) // branch-name fallback is fine at creation
 		created, err := gh.CreatePR(ctx, forge.NewPR{
 			Title: title,
 			Head:  b.Name,
@@ -147,5 +149,25 @@ func (d *deps) ensurePR(ctx context.Context, gh *forge.GitHub, b *stack.Branch, 
 		return fmt.Errorf("align PR #%d base to %q: %w", b.PR, b.Parent, err)
 	}
 	b.Title, b.URL = updated.Title, updated.URL
+	return d.maybeUpdateTitle(ctx, gh, b, updateTitles, out)
+}
+
+// maybeUpdateTitle resets an existing PR's title to its branch's first commit
+// subject when --update-titles is set and the title has drifted. Newly created
+// PRs already get this title at creation, so they need no update.
+func (d *deps) maybeUpdateTitle(ctx context.Context, gh *forge.GitHub, b *stack.Branch, updateTitles bool, out io.Writer) error {
+	if !updateTitles {
+		return nil
+	}
+	desired, ok := d.repo.FirstCommitSubject(b.ParentCommit, b.Name)
+	if !ok || desired == b.Title {
+		return nil // couldn't derive a real subject (don't clobber), or already correct
+	}
+	updated, err := gh.SetTitle(ctx, b.PR, desired)
+	if err != nil {
+		return fmt.Errorf("retitle PR #%d: %w", b.PR, err)
+	}
+	b.Title, b.URL = updated.Title, updated.URL
+	fmt.Fprintf(out, "  retitled PR #%d -> %q\n", b.PR, desired)
 	return nil
 }

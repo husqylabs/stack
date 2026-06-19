@@ -111,6 +111,17 @@ func (g *GitHub) SetBase(ctx context.Context, number int, base string) (*PR, err
 	return &out, nil
 }
 
+// SetTitle updates a PR's title and returns the updated PR.
+// PATCH /repos/{o}/{r}/pulls/{n} with {"title": ...}
+func (g *GitHub) SetTitle(ctx context.Context, number int, title string) (*PR, error) {
+	path := fmt.Sprintf("/repos/%s/%s/pulls/%d", g.Owner, g.Repo, number)
+	var out PR
+	if err := g.doJSON(ctx, http.MethodPatch, path, map[string]string{"title": title}, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // FetchStack is the MOCKUP the spec asked for: extract the JSON stack state from
 // a PR's hidden comment via the REST API. Because state lives in the PR itself,
 // ANY teammate can reconstruct the stack with just a token — no backend.
