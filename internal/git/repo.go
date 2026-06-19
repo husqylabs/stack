@@ -110,9 +110,9 @@ func (r *Repo) CommitsBetween(base, branch string) ([]*object.Commit, error) {
 		if c.Hash == baseCommit.Hash {
 			return storerStop
 		}
-		isAncestorOfBase, _ := baseCommit.IsAncestor(c)
-		if isAncestorOfBase {
-			return nil // shared history, not unique to branch
+		inBaseHistory, _ := c.IsAncestor(baseCommit)
+		if inBaseHistory {
+			return nil // reachable from base (e.g. via a merge): shared, not unique
 		}
 		out = append(out, c)
 		return nil
