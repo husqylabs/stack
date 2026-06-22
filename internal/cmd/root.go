@@ -39,6 +39,7 @@ func NewRoot() *cobra.Command {
 		newSubmitCmd(d),
 		newAdoptCmd(d),
 		newReparentCmd(d),
+		newRemoveCmd(d),
 	)
 	return root
 }

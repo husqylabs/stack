@@ -111,6 +111,13 @@ func (g *GitHub) SetBase(ctx context.Context, number int, base string) (*PR, err
 	return &out, nil
 }
 
+// ClosePR closes a pull request without merging.
+// PATCH /repos/{o}/{r}/pulls/{n} with {"state": "closed"}
+func (g *GitHub) ClosePR(ctx context.Context, number int) error {
+	path := fmt.Sprintf("/repos/%s/%s/pulls/%d", g.Owner, g.Repo, number)
+	return g.doJSON(ctx, http.MethodPatch, path, map[string]string{"state": "closed"}, nil)
+}
+
 // SetTitle updates a PR's title and returns the updated PR.
 // PATCH /repos/{o}/{r}/pulls/{n} with {"title": ...}
 func (g *GitHub) SetTitle(ctx context.Context, number int, title string) (*PR, error) {

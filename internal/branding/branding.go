@@ -28,6 +28,7 @@ var B = Brand{
 	CmdSubmit:   "submit",
 	CmdAdopt:    "adopt",
 	CmdReparent: "reparent",
+	CmdRemove:   "remove",
 
 	// Local on-disk state ---------------------------------------------------
 	// Stored under the repo's .git dir so it never pollutes the worktree.
@@ -54,7 +55,7 @@ var B = Brand{
 type Brand struct {
 	Name, Title, Tagline, EnvPrefix string
 
-	CmdStart, CmdSync, CmdSubmit, CmdAdopt, CmdReparent string
+	CmdStart, CmdSync, CmdSubmit, CmdAdopt, CmdReparent, CmdRemove string
 
 	StateDir, StateFile string
 
