@@ -32,18 +32,23 @@ Branding (binary name, command verbs, comment markers) is centralized in
 
 ## Documentation
 
+**Hosted site:** https://husqylabs.github.io/stack/
+
 - [Command reference](docs/commands.md) — every command, flag, and default.
 - [Cheat sheet](docs/cheatsheet.md) — one-page quick reference and workflow recipes.
 
-Both files are **generated** from the cobra command tree, so they never drift
-from the code (and pick up branding changes automatically):
+The docs (`docs/*.md` plus `mkdocs.yml`) are **generated** from the cobra command
+tree, so they never drift from the code and pick up branding changes
+automatically:
 
 ```sh
-go generate ./...   # regenerate docs/commands.md and docs/cheatsheet.md
+go generate ./...   # regenerate docs/ and mkdocs.yml
 ```
 
-A test (`internal/docs`) fails if the committed docs are stale, so CI catches a
-forgotten regen.
+A test (`internal/docs`) fails if the committed docs are stale. The hosted site
+is built by the `docs` GitHub Actions workflow, which regenerates from source
+before publishing to GitHub Pages — so the site always reflects the current
+command tree.
 
 ## Build
 

@@ -17,8 +17,10 @@ func TestGeneratedDocsAreUpToDate(t *testing.T) {
 		path string
 		want string
 	}{
+		{"../../docs/index.md", docs.Index(root)},
 		{"../../docs/commands.md", docs.Reference(root)},
 		{"../../docs/cheatsheet.md", docs.Cheatsheet(root)},
+		{"../../mkdocs.yml", docs.MkdocsConfig()},
 	}
 	for _, tc := range cases {
 		got, err := os.ReadFile(tc.path)

@@ -21,9 +21,11 @@ func main() {
 	if err := os.MkdirAll("docs", 0o755); err != nil {
 		fail(err)
 	}
+	write("docs/index.md", docs.Index(root))
 	write("docs/commands.md", docs.Reference(root))
 	write("docs/cheatsheet.md", docs.Cheatsheet(root))
-	fmt.Println("generated docs/commands.md and docs/cheatsheet.md")
+	write("mkdocs.yml", docs.MkdocsConfig())
+	fmt.Println("generated docs/index.md, docs/commands.md, docs/cheatsheet.md, mkdocs.yml")
 }
 
 func write(path, content string) {
