@@ -51,6 +51,22 @@ func (s *Stack) Add(name, parent, parentCommit string) (*Branch, error) {
 	return b, nil
 }
 
+// Remove untracks `name`, grafting its children onto its parent so the DAG stays
+// connected (removing a middle branch links its children to its grandparent).
+// Returns the removed branch. Children keep their recorded ParentCommit, so a
+// subsequent sync rebases them onto the new parent.
+func (s *Stack) Remove(name string) (*Branch, error) {
+	b, ok := s.Branches[name]
+	if !ok {
+		return nil, fmt.Errorf("branch %q is not tracked", name)
+	}
+	for _, ch := range s.Children(name) {
+		ch.Parent = b.Parent
+	}
+	delete(s.Branches, name)
+	return b, nil
+}
+
 // Children returns the branches whose Parent is the given name.
 func (s *Stack) Children(name string) []*Branch {
 	var out []*Branch

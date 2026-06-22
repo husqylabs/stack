@@ -45,6 +45,36 @@ func TestReparentCycleGuard(t *testing.T) {
 	}
 }
 
+func TestRemoveGraftsChildrenOntoParent(t *testing.T) {
+	s := chain() // main <- a <- b <- c
+
+	removed, err := s.Remove("b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if removed.Name != "b" {
+		t.Fatalf("returned %q, want b", removed.Name)
+	}
+	if _, ok := s.Branches["b"]; ok {
+		t.Fatal("b should be untracked")
+	}
+	// c was b's child; it must now point at b's parent, a.
+	if got := s.Branches["c"].Parent; got != "a" {
+		t.Fatalf("c.Parent = %q, want a (grafted onto grandparent)", got)
+	}
+	// The DAG stays connected and acyclic.
+	if _, err := s.TopoOrder(); err != nil {
+		t.Fatalf("topo order broke after remove: %v", err)
+	}
+}
+
+func TestRemoveUntrackedBranchErrors(t *testing.T) {
+	s := chain()
+	if _, err := s.Remove("nope"); err == nil {
+		t.Fatal("expected error removing an untracked branch")
+	}
+}
+
 func TestIsAncestorTerminatesOnPreexistingCycle(t *testing.T) {
 	// Defensive: a corrupted state with a parent cycle must not hang.
 	s := New("main")

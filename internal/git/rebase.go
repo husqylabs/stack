@@ -197,6 +197,21 @@ func (r *Repo) Fetch(ctx context.Context, remote string) (string, error) {
 	return r.run(ctx, "fetch", remote)
 }
 
+// Checkout switches to an existing branch.
+func (r *Repo) Checkout(ctx context.Context, name string) (string, error) {
+	return r.run(ctx, "checkout", name)
+}
+
+// DeleteLocalBranch force-deletes a local branch.
+func (r *Repo) DeleteLocalBranch(ctx context.Context, name string) (string, error) {
+	return r.run(ctx, "branch", "-D", name)
+}
+
+// DeleteRemoteBranch deletes a branch on the remote.
+func (r *Repo) DeleteRemoteBranch(ctx context.Context, remote, name string) (string, error) {
+	return r.run(ctx, "push", remote, "--delete", name)
+}
+
 // TrackRemoteBranch creates a local branch `name` tracking `remote/name`, without
 // checking it out. Used by adopt to materialize a teammate's stack locally.
 func (r *Repo) TrackRemoteBranch(ctx context.Context, remote, name string) error {
