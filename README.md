@@ -30,6 +30,21 @@ a hidden HTML comment in each PR description.
 Branding (binary name, command verbs, comment markers) is centralized in
 `internal/branding` — rebrand by editing that one file.
 
+## Documentation
+
+- [Command reference](docs/commands.md) — every command, flag, and default.
+- [Cheat sheet](docs/cheatsheet.md) — one-page quick reference and workflow recipes.
+
+Both files are **generated** from the cobra command tree, so they never drift
+from the code (and pick up branding changes automatically):
+
+```sh
+go generate ./...   # regenerate docs/commands.md and docs/cheatsheet.md
+```
+
+A test (`internal/docs`) fails if the committed docs are stale, so CI catches a
+forgotten regen.
+
 ## Build
 
 ```sh

@@ -1,5 +1,7 @@
 package main
 
+//go:generate go run ./tools/docgen
+
 import (
 	"fmt"
 	"os"
